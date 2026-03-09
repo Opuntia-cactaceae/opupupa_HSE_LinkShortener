@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Сервис сокращения ссылок</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🔗%3C/text%3E%3C/svg%3E">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1 id="app-title">Сервис сокращения ссылок</h1>
+            <div class="auth-status">
+                <span id="auth-status">Вход не выполнен</span>
+                <button id="logout-btn" class="btn btn-secondary" style="display: none;">Выйти</button>
+            </div>
+        </header>
+
+        <main class="grid">
+            <section class="card auth-card">
+                <h2>Аутентификация</h2>
+                <div class="form-row auth-forms">
+                    <div class="form-group">
+                        <h3>Регистрация</h3>
+                        <form id="register-form">
+                            <div class="form-group">
+                                <label for="register-email">Электронная почта</label>
+                                <input
+                                    type="email"
+                                    id="register-email"
+                                    class="form-control"
+                                    placeholder="user@example.com"
+                                    autocomplete="email"
+                                    required
+                                >
+                            </div>
+                            <div class="form-group">
+                                <label for="register-password">Пароль</label>
+                                <input
+                                    type="password"
+                                    id="register-password"
+                                    class="form-control"
+                                    placeholder="Не менее 8 символов"
+                                    autocomplete="new-password"
+                                    minlength="8"
+                                    required
+                                >
+                            </div>
+                            <button type="submit" id="register-btn" class="btn btn-block">Зарегистрироваться</button>
+                        </form>
+                        <div id="register-message" class="message" style="display: none;"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <h3>Вход</h3>
+                        <form id="login-form">
+                            <div class="form-group">
+                                <label for="login-email">Электронная почта</label>
+                                <input
+                                    type="email"
+                                    id="login-email"
+                                    class="form-control"
+                                    placeholder="user@example.com"
+                                    autocomplete="email"
+                                    required
+                                >
+                            </div>
+                            <div class="form-group">
+                                <label for="login-password">Пароль</label>
+                                <input
+                                    type="password"
+                                    id="login-password"
+                                    class="form-control"
+                                    placeholder="Введите пароль"
+                                    autocomplete="current-password"
+                                    required
+                                >
+                            </div>
+                            <button type="submit" id="login-btn" class="btn btn-success btn-block">Войти</button>
+                        </form>
+                        <div id="login-message" class="message" style="display: none;"></div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card create-card">
+                <h2>Создание короткой ссылки</h2>
+                <form id="shorten-form">
+                    <div class="form-group">
+                        <label for="original-url">Исходный URL</label>
+                        <input
+                            type="url"
+                            id="original-url"
+                            class="form-control"
+                            placeholder="https://example.com/very/long/url"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="custom-alias">Пользовательский алиас</label>
+                            <input
+                                type="text"
+                                id="custom-alias"
+                                class="form-control"
+                                placeholder="my-alias"
+                                pattern="[A-Za-z0-9_-]{3,32}"
+                                title="Допустимы буквы, цифры, дефис и подчеркивание. Длина от 3 до 32 символов."
+                            >
+                        </div>
+
+                        <div class="form-group">
+                            <label for="expires-at">Дата истечения</label>
+                            <input
+                                type="datetime-local"
+                                id="expires-at"
+                                class="form-control"
+                            >
+                        </div>
+                    </div>
+
+                    <button type="submit" id="shorten-btn" class="btn btn-block">Сократить ссылку</button>
+                </form>
+                <div id="shorten-message" class="message" style="display: none;"></div>
+            </section>
+
+            <section class="card result-card result-card-layout" id="result-card" style="display: none;">
+                <h2>Короткая ссылка создана</h2>
+                <p>Ссылка готова к использованию:</p>
+                <a href="#" id="short-link" class="short-link" target="_blank" rel="noopener noreferrer"></a>
+                <p>Ответ сервиса:</p>
+                <pre id="result-json" class="json-display"></pre>
+            </section>
+
+            <section class="card analytics-card">
+                <h2>Поиск и аналитика</h2>
+                <div class="form-row analytics-forms">
+                    <div class="form-group">
+                        <h3>Поиск по исходному URL</h3>
+                        <form id="search-form">
+                            <div class="form-group">
+                                <label for="search-url">Исходный URL</label>
+                                <input
+                                    type="url"
+                                    id="search-url"
+                                    class="form-control"
+                                    placeholder="https://example.com"
+                                    required
+                                >
+                            </div>
+                            <button type="submit" id="search-btn" class="btn btn-block">Найти ссылки</button>
+                        </form>
+                        <div id="search-results" class="message" style="display: none;"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <h3>Получение информации о ссылке</h3>
+                        <form id="info-form">
+                            <div class="form-group">
+                                <label for="info-short-code">Короткий код</label>
+                                <input
+                                    type="text"
+                                    id="info-short-code"
+                                    class="form-control"
+                                    placeholder="abc123"
+                                    required
+                                >
+                            </div>
+                            <button type="submit" id="info-btn" class="btn btn-block">Получить информацию</button>
+                        </form>
+                        <div id="info-results" class="message" style="display: none;"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <h3>Получение статистики</h3>
+                        <form id="stats-form">
+                            <div class="form-group">
+                                <label for="stats-short-code">Короткий код</label>
+                                <input
+                                    type="text"
+                                    id="stats-short-code"
+                                    class="form-control"
+                                    placeholder="abc123"
+                                    required
+                                >
+                            </div>
+                            <button type="submit" id="stats-btn" class="btn btn-block">Получить статистику</button>
+                        </form>
+                        <div id="stats-results" class="message" style="display: none;"></div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>Демонстрационный интерфейс сервиса сокращения ссылок</p>
+        </footer>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
