@@ -17,12 +17,20 @@ from ...domain.repositories.unit_of_work import IUnitOfWork
 
 
 class UpdateLinkUseCase:
+    """Обновляет параметры существующей короткой ссылки.
+
+    Изменяет исходный URL, короткий код, срок действия и привязку к проекту.
+    """
     def __init__(self, uow: IUnitOfWork) -> None:
         self._uow = uow
 
     async def execute(
         self, short_code: str, request: UpdateLinkRequest, actor_user_id: Optional[UUID]
     ) -> None:
+        """Обновляет параметры короткой ссылки.
+
+        Проверяет права доступа и применяет изменения к сущности ссылки.
+        """
         try:
             code = ShortCode.from_string(short_code)
         except ValueError as e:

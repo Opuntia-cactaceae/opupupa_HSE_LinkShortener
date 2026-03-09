@@ -228,3 +228,138 @@ https://example.com/opupupa/a8Gh12K
 - Redis кэш используется минимум для редиректа, с инвалидацией на update/delete/purge.
 - SQLAlchemy используется только внутри репозиториев под UoW.
 - Код без комментариев, слой домена не зависит от FastAPI/SQLAlchemy/Redis.
+
+
+
+## Input Validation Contract (Pydantic)
+
+Цель: все входные данные валидируются и нормализуются на уровне `presentation/schemas/*` до попадания в application/domain. Неизвестные поля в body запрещены (`extra="forbid"`).
+
+### Общие правила
+- Pydantic v2.
+- Request body модели: `extra="forbid"`.
+- Все строки перед валидацией триммятся (если применимо).
+- Все datetime в UTC; если вход без timezone — трактуется как UTC.
+- Для истечения `expires_at`: точность до минуты (seconds==0, microseconds==0), строго в будущем.
+
+### Общие типы
+#### ShortCodeField
+- Type: `str`
+- Constraints:
+  - length: 3..32
+  - regex: `^[A-Za-z0-9_-]+$`
+- Usage: path `short_code`, `custom_alias`, `new_short_code`
+
+---
+
+## Auth Endpoints
+
+### POST /auth/register
+- Request Body: `RegisterRequest` (`src/presentation/schemas/auth.py`)
+  - `email: EmailStr`
+  - `password: str` length 8..128
+- Validation:
+  - email: Pydantic EmailStr
+  - password: min_length=8, max_length=128
+  - unknown fields rejected
+
+### POST /auth/login
+- Request Body: `LoginRequest` (`src/presentation/schemas/auth.py`)
+  - `email: EmailStr`
+  - `password: str` length 8..128
+- Validation:
+  - email: Pydantic EmailStr
+  - password: min_length=8, max_length=128
+  - unknown fields rejected
+
+### Authorization Header (optional for some endpoints)
+- Input: `Authorization: Bearer <token>`
+- Parsed by: `HTTPBearer` (`src/presentation/api/deps.py`)
+- Validation:
+  - token must be valid JWT via `token_provider.decode()` (or equivalent)
+  - failures map to 401
+
+---
+
+## Link CRUD Endpoints
+
+### POST /links/shorten
+- Request Body: `ShortenLinkRequest` (`src/presentation/schemas/links.py`)
+  - `original_url: HttpUrl`
+  - `custom_alias: Optional[ShortCodeField]`
+  - `expires_at: Optional[datetime]`
+- Validation:
+  - original_url: http/https URL (Pydantic HttpUrl)
+  - custom_alias: ShortCodeField constraints
+  - expires_at:
+    - UTC normalization
+    - must be strictly > now
+    - seconds==0 and microseconds==0
+  - unknown fields rejected
+- Auth header: optional (owner_user_id set if present)
+
+### GET /links/{short_code}
+- Path:
+  - `short_code: ShortCodeField`
+- Validation: ShortCodeField constraints
+
+### PUT /links/{short_code}
+- Path:
+  - `short_code: ShortCodeField`
+- Request Body: `UpdateLinkRequest` (`src/presentation/schemas/links.py`)
+  - `original_url: Optional[HttpUrl]`
+  - `new_short_code: Optional[ShortCodeField]`
+  - `expires_at: Optional[datetime]`
+- Validation:
+  - if original_url provided: HttpUrl
+  - if new_short_code provided: ShortCodeField constraints
+  - if expires_at provided:
+    - UTC normalization
+    - must be strictly > now
+    - seconds==0 and microseconds==0
+  - unknown fields rejected
+- Auth header: required (owner only)
+
+### DELETE /links/{short_code}
+- Path:
+  - `short_code: ShortCodeField`
+- Auth header: required (owner only)
+- Validation: ShortCodeField constraints
+
+### GET /links/{short_code}/stats
+- Path:
+  - `short_code: ShortCodeField`
+- Validation: ShortCodeField constraints
+
+---
+
+## Search Endpoints
+
+### GET /links/search
+- Query Model: `SearchLinksQuery` (`src/presentation/schemas/links.py`)
+  - `original_url: HttpUrl`
+  - `page: int` default 1, ge=1
+  - `size: int` default 100, ge=1, le=100
+- Validation:
+  - original_url: HttpUrl
+  - page ≥ 1
+  - size in 1..100
+
+---
+
+## Redirect Endpoint
+
+### GET /{SHORT_LINK_PREFIX}/{short_code}
+- Prefix: `SHORT_LINK_PREFIX` from settings, default `opupupa`
+- Path:
+  - `short_code: ShortCodeField`
+- Validation: ShortCodeField constraints
+- Cache must not serve expired links:
+  - if cached expires_at <= now -> treat as miss and resolve via use case or return 404
+
+---
+
+## System Endpoints
+
+### GET /health
+- No inputs
