@@ -22,7 +22,7 @@ def create_app() -> FastAPI:
     async def lifespan(app: FastAPI):
         await redis_client.connect()
         cache = LinkCache()
-        uow_factory = SqlAlchemyUnitOfWork()
+        uow_factory = SqlAlchemyUnitOfWork
         app.state.purge_job = PurgeExpiredLinksJob(
             uow_factory=uow_factory,
             cache=cache,

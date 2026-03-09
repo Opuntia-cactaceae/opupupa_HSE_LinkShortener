@@ -12,10 +12,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-COPY . .
+COPY requirements.txt .
 
-RUN pip install --no-cache-dir -e .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "alembic upgrade head && uvicorn src.presentation.api.app:app --host 0.0.0.0 --port 8000"]
+CMD ["sh", "-c", "alembic -c alembic.ini upgrade head && uvicorn src.presentation.api.app:app --host 0.0.0.0 --port 8000"]

@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base, UUIDMixin, TimestampMixin
@@ -10,10 +10,17 @@ from .base import Base, UUIDMixin, TimestampMixin
 
 class LinkModel(Base, UUIDMixin, TimestampMixin):
     __tablename__ = "links"
+    __table_args__ = (
+        Index(
+            "uq_links_short_code_active",
+            "short_code",
+            unique=True,
+            postgresql_where=text("is_deleted = false"),
+        ),
+    )
 
     short_code: Mapped[str] = mapped_column(
         String(50),
-        unique=True,
         nullable=False,
         index=True,
     )
