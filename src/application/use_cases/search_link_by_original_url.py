@@ -14,13 +14,6 @@ class SearchLinkByOriginalUrlUseCase:
             query.original_url, query.limit, query.offset
         )
 
-        # Load stats in batch
-        link_ids = [link.id for link in links]
-        if link_ids:
-            stats_list = await self._uow.stats.get_by_link_ids(link_ids)
-            stats_by_link_id = {stats.link_id: stats for stats in stats_list}
-        else:
-            stats_by_link_id = {}
 
         now = datetime.now(timezone.utc)
         base_url = settings.BASE_URL
@@ -28,9 +21,6 @@ class SearchLinkByOriginalUrlUseCase:
 
         results = []
         for link in links:
-            stats = stats_by_link_id.get(link.id)
-            clicks = stats.clicks if stats else 0
-            last_used_at = stats.last_used_at if stats else None
             results.append(
                 LinkInfoResponse(
                     short_code=str(link.short_code),
@@ -43,8 +33,6 @@ class SearchLinkByOriginalUrlUseCase:
                     full_short_url=f"{base_url}/{prefix}/{link.short_code}",
                     is_expired=link.is_expired(now),
                     project_id=link.project_id,
-                    clicks=clicks,
-                    last_used_at=last_used_at,
                 )
             )
         return results

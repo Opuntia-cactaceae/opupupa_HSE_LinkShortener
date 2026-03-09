@@ -22,6 +22,9 @@ class DeleteLinkUseCase:
         if link is None:
             raise LinkNotFoundError()
 
+        if link.owner_user_id is None:
+            raise UserNotAuthorizedError("Anonymous links cannot be deleted")
+
         if not link.is_owner(actor_user_id):
             raise UserNotAuthorizedError()
 

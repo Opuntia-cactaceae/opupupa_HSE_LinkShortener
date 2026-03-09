@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import timedelta
 from typing import Optional
 from uuid import UUID
 
@@ -17,7 +17,8 @@ from ...domain.repositories.unit_of_work import IUnitOfWork
 
 
 class ShortenLinkUseCase:
-    """Выполняет создание короткой ссылки на основании исходного URL и параметров запроса."""
+    ANONYMOUS_LINK_TTL_DAYS = 10
+
     def __init__(
         self,
         uow: IUnitOfWork,
@@ -31,17 +32,20 @@ class ShortenLinkUseCase:
     async def execute(
         self, request: ShortenLinkRequest, actor_user_id: Optional[UUID] = None
     ) -> ShortenLinkResponse:
-        """Обрабатывает запрос на создание короткой ссылки.
-
-        Проверяет входные данные, генерирует короткий код и сохраняет новую сущность ссылки.
-        """
         try:
             original_url = OriginalUrl.from_string(request.original_url)
         except ValueError as e:
             raise ValidationError(str(e))
 
         expires_at = None
-        if request.expires_at is not None:
+
+        if actor_user_id is None:
+            anonymous_expires_at = self._time_provider.now() + timedelta(days=self.ANONYMOUS_LINK_TTL_DAYS)
+            try:
+                expires_at = ExpiresAt.from_datetime(anonymous_expires_at)
+            except ValueError as e:
+                raise ValidationError(str(e))
+        elif request.expires_at is not None:
             try:
                 expires_at = ExpiresAt.from_datetime(request.expires_at)
             except ValueError as e:
@@ -59,13 +63,24 @@ class ShortenLinkUseCase:
 
         short_code_value = request.custom_alias
         if short_code_value is None:
-            return await self._create_with_generated_code(original_url, expires_at, actor_user_id, project_id)
+            return await self._create_with_generated_code(
+                original_url,
+                expires_at,
+                actor_user_id,
+                project_id,
+            )
         else:
             try:
                 short_code = ShortCode.from_string(short_code_value)
             except ValueError as e:
                 raise ValidationError(str(e))
-            return await self._create_with_specific_code(short_code, original_url, expires_at, actor_user_id, project_id)
+            return await self._create_with_specific_code(
+                short_code,
+                original_url,
+                expires_at,
+                actor_user_id,
+                project_id,
+            )
 
     async def _create_with_generated_code(
         self,
@@ -78,7 +93,13 @@ class ShortenLinkUseCase:
             code = self._short_code_generator.generate()
             short_code = ShortCode.from_string(code)
             try:
-                return await self._attempt_create_link(short_code, original_url, expires_at, actor_user_id, project_id)
+                return await self._attempt_create_link(
+                    short_code,
+                    original_url,
+                    expires_at,
+                    actor_user_id,
+                    project_id,
+                )
             except ShortCodeAlreadyExistsError:
                 if attempt == 9:
                     raise ShortCodeAlreadyExistsError("Could not generate unique short code")
@@ -95,7 +116,13 @@ class ShortenLinkUseCase:
         project_id: Optional[UUID],
     ) -> ShortenLinkResponse:
         try:
-            return await self._attempt_create_link(short_code, original_url, expires_at, actor_user_id, project_id)
+            return await self._attempt_create_link(
+                short_code,
+                original_url,
+                expires_at,
+                actor_user_id,
+                project_id,
+            )
         except ShortCodeAlreadyExistsError:
             raise ShortCodeAlreadyExistsError()
 
@@ -125,6 +152,7 @@ class ShortenLinkUseCase:
             raise ShortCodeAlreadyExistsError()
 
         from ...infrastructure.settings import settings
+
         full_short_url = f"{settings.BASE_URL}/{settings.SHORT_LINK_PREFIX}/{short_code}"
         return ShortenLinkResponse(
             short_code=str(short_code),
