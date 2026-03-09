@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 
+from ...infrastructure.settings import settings
 from ...domain.value_objects.short_code import ShortCode
 from ..dto.link_dto import LinkStatsResponse
 from ..errors.errors import LinkNotFoundError, ValidationError
@@ -21,23 +22,15 @@ class GetLinkStatsUseCase:
             raise LinkNotFoundError()
 
         stats = await self._uow.stats.get_by_link_id(link.id)
-        if stats is None:
-            raise LinkNotFoundError()
 
-        from ...infrastructure.settings import settings
+        clicks = stats.clicks if stats else 0
+        last_used_at = stats.last_used_at if stats else None
 
         full_short_url = f"{settings.BASE_URL}/{settings.SHORT_LINK_PREFIX}/{link.short_code}"
-        is_expired = link.is_expired(datetime.now(timezone.utc))
 
         return LinkStatsResponse(
             short_code=str(link.short_code),
-            original_url=str(link.original_url),
-            created_at=link.created_at,
-            clicks=stats.clicks,
-            last_used_at=stats.last_used_at,
-            expires_at=link.expires_at.value if link.expires_at else None,
             full_short_url=full_short_url,
-            is_expired=is_expired,
-            project_id=link.project_id,
-            owner_user_id=link.owner_user_id,
+            clicks=clicks,
+            last_used_at=last_used_at,
         )
