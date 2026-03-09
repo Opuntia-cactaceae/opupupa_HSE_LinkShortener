@@ -5,7 +5,7 @@ from datetime import datetime, timezone, timedelta
 
 from src.application.use_cases.list_project_links import ListProjectLinksUseCase
 from src.application.dto.link_dto import ProjectLinkResponse
-from src.application.errors.errors import ApplicationError
+from src.application.errors.errors import ProjectNotFoundError, UserNotAuthorizedError
 from src.domain.entities.project import Project
 from src.domain.entities.link import Link
 from src.domain.entities.link_stats import LinkStats
@@ -97,11 +97,8 @@ class TestListProjectLinksUseCase:
         mock_uow.projects.get_by_id = AsyncMock(return_value=None)
 
         # Act & Assert
-        with pytest.raises(ApplicationError) as exc_info:
+        with pytest.raises(ProjectNotFoundError):
             await use_case.execute(project_id=sample_project_id, owner_user_id=sample_user_id)
-
-        assert exc_info.value.error_code == "project_not_found"
-        assert exc_info.value.status_code == 404
 
         mock_uow.projects.get_by_id.assert_called_once_with(sample_project_id)
         mock_uow.links.find_by_project_id.assert_not_called()
@@ -114,11 +111,8 @@ class TestListProjectLinksUseCase:
         mock_uow.projects.get_by_id = AsyncMock(return_value=mock_project)
 
         # Act & Assert
-        with pytest.raises(ApplicationError) as exc_info:
+        with pytest.raises(UserNotAuthorizedError):
             await use_case.execute(project_id=sample_project_id, owner_user_id=sample_user_id)
-
-        assert exc_info.value.error_code == "unauthorized"
-        assert exc_info.value.status_code == 403
 
         mock_uow.projects.get_by_id.assert_called_once_with(sample_project_id)
         mock_uow.links.find_by_project_id.assert_not_called()

@@ -4,10 +4,15 @@ from unittest.mock import patch
 from uuid import uuid4
 
 from src.domain.entities.link import Link
-from src.domain.entities.user import User, pwd_context
+from src.domain.entities.user import User
 from src.domain.value_objects.short_code import ShortCode
 from src.domain.value_objects.original_url import OriginalUrl
 from src.domain.value_objects.expires_at import ExpiresAt
+
+
+def make_test_hash(password: str) -> str:
+    """Return deterministic test hash matching patched password hasher."""
+    return f"test_hash_{password}"
 
 
 class TestExpirationBehaviour:
@@ -19,7 +24,7 @@ class TestExpirationBehaviour:
         # Arrange: create a link with expired_at set (marked expired)
         async with uow:
             # Create a user first (required for link ownership)
-            password_hash = pwd_context.hash("testpassword123")
+            password_hash = make_test_hash("testpassword123")
             user = User.create(
                 email=f"test_{uuid4().hex[:8]}@example.com",
                 password_hash=password_hash,
@@ -55,7 +60,7 @@ class TestExpirationBehaviour:
         """Test that expired links are returned by /links/expired endpoint."""
         # Arrange: create expired link (marked expired)
         async with uow:
-            password_hash = pwd_context.hash("testpassword123")
+            password_hash = make_test_hash("testpassword123")
             user = User.create(
                 email=f"test2_{uuid4().hex[:8]}@example.com",
                 password_hash=password_hash,
@@ -95,7 +100,7 @@ class TestExpirationBehaviour:
         """Test purge job marks expired links as expired and invalidates cache."""
         # Arrange: create link with past expires_at (should be purged)
         async with uow:
-            password_hash = pwd_context.hash("testpassword123")
+            password_hash = make_test_hash("testpassword123")
             user = User.create(
                 email=f"purge_{uuid4().hex[:8]}@example.com",
                 password_hash=password_hash,
@@ -170,7 +175,7 @@ class TestExpirationBehaviour:
     async def test_purge_job_ignores_active_links(self, client, uow, test_settings):
         """Test purge job does not process active (non-expired) links."""
         # Arrange: create active link with future expiration
-        password_hash = pwd_context.hash("testpassword123")
+        password_hash = make_test_hash("testpassword123")
         user = User.create(
             email=f"active_{uuid4().hex[:8]}@example.com",
             password_hash=password_hash,
@@ -219,7 +224,7 @@ class TestExpirationBehaviour:
         """Test stale links (unused for UNUSED_LINK_TTL_DAYS) are marked expired."""
         # Arrange: create link with last_used_at far in the past
         async with uow:
-            password_hash = pwd_context.hash("testpassword123")
+            password_hash = make_test_hash("testpassword123")
             user = User.create(
                 email=f"stale_{uuid4().hex[:8]}@example.com",
                 password_hash=password_hash,
@@ -292,7 +297,7 @@ class TestExpirationBehaviour:
         """Test stale links with recent last_used_at are not marked expired."""
         # Arrange: create link with recent last_used_at
         async with uow:
-            password_hash = pwd_context.hash("testpassword123")
+            password_hash = make_test_hash("testpassword123")
             user = User.create(
                 email=f"recent_{uuid4().hex[:8]}@example.com",
                 password_hash=password_hash,

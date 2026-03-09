@@ -3,7 +3,6 @@ import os
 # Set environment variables before any imports that depend on settings
 os.environ.update({
     "DATABASE_URL": "sqlite+aiosqlite:///:memory:",
-    "POSTGRES_DSN": "sqlite+aiosqlite:///:memory:",
     "REDIS_URL": "redis://localhost:6379/1",  # Use DB index 1 for tests
     "JWT_SECRET": "test-secret-key-for-testing-only",
     "DEBUG": "true",
@@ -53,16 +52,16 @@ def test_settings() -> Settings:
 
 @pytest.fixture(scope="session", autouse=True)
 def patch_password_hasher():
-    """Patch bcrypt password hasher to use pbkdf2_sha256 for tests."""
+    """Patch bcrypt password hasher to use a fast, deterministic hash for tests."""
     from unittest.mock import patch
-    from passlib.context import CryptContext
-    test_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
-    def fast_hash(password: str) -> str:
-        return test_context.hash(password)
+    def fast_hash(self, password: str) -> str:
+        # Simple deterministic hash for testing
+        return f"test_hash_{password}"
 
-    def fast_verify(password: str, hashed: str) -> bool:
-        return test_context.verify(password, hashed)
+    def fast_verify(self, password: str, hashed: str) -> bool:
+        # Verify the simple hash
+        return hashed == f"test_hash_{password}"
 
     with patch("src.infrastructure.auth.password_hasher.BcryptPasswordHasher.hash", fast_hash), \
          patch("src.infrastructure.auth.password_hasher.BcryptPasswordHasher.verify", fast_verify):

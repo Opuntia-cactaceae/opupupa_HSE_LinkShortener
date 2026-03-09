@@ -16,14 +16,14 @@ class TestShortCode:
         assert str(code) == "a-b_c123"
 
     def test_short_code_min_length(self):
-        """Test short code with minimum allowed length (2 characters)."""
-        code = ShortCode("ab")
-        assert str(code) == "ab"
+        """Test short code with minimum allowed length (3 characters)."""
+        code = ShortCode("abc")
+        assert str(code) == "abc"
 
     def test_short_code_max_length(self):
-        """Test short code with maximum allowed length (50 characters)."""
-        code = ShortCode("a" * 50)
-        assert len(code.value) == 50
+        """Test short code with maximum allowed length (32 characters)."""
+        code = ShortCode("a" * 32)
+        assert len(code.value) == 32
 
     def test_short_code_empty(self):
         """Test that empty short code raises error."""
@@ -31,14 +31,14 @@ class TestShortCode:
             ShortCode("")
 
     def test_short_code_too_short(self):
-        """Test that short code less than 2 characters raises error."""
-        with pytest.raises(ValueError, match="Short code must be at least 2 characters"):
+        """Test that short code less than 3 characters raises error."""
+        with pytest.raises(ValueError, match="Short code must be at least 3 characters"):
             ShortCode("a")
 
     def test_short_code_too_long(self):
-        """Test that short code more than 50 characters raises error."""
-        with pytest.raises(ValueError, match="Short code cannot exceed 50 characters"):
-            ShortCode("a" * 51)
+        """Test that short code more than 32 characters raises error."""
+        with pytest.raises(ValueError, match="Short code cannot exceed 32 characters"):
+            ShortCode("a" * 33)
 
     def test_short_code_invalid_characters(self):
         """Test that short code with invalid characters raises error."""
