@@ -126,8 +126,6 @@ class LinkInfoResponse(BaseModel):
     full_short_url: str
     is_expired: bool
     project_id: Optional[UUID]
-    clicks: int = 0
-    last_used_at: Optional[datetime] = None
 
     @classmethod
     def from_dto(cls, dto):
@@ -142,36 +140,22 @@ class LinkInfoResponse(BaseModel):
             full_short_url=dto.full_short_url,
             is_expired=dto.is_expired,
             project_id=dto.project_id,
-            clicks=dto.clicks,
-            last_used_at=dto.last_used_at,
         )
 
 
 class LinkStatsResponse(BaseModel):
     short_code: str
-    original_url: str
-    created_at: datetime
+    full_short_url: str
     clicks: int
     last_used_at: Optional[datetime]
-    expires_at: Optional[datetime]
-    full_short_url: str
-    is_expired: bool
-    project_id: Optional[UUID]
-    owner_user_id: Optional[UUID]
 
     @classmethod
     def from_dto(cls, dto):
         return cls(
             short_code=dto.short_code,
-            original_url=dto.original_url,
-            created_at=dto.created_at,
+            full_short_url=dto.full_short_url,
             clicks=dto.clicks,
             last_used_at=dto.last_used_at,
-            expires_at=dto.expires_at,
-            full_short_url=dto.full_short_url,
-            is_expired=dto.is_expired,
-            project_id=dto.project_id,
-            owner_user_id=dto.owner_user_id,
         )
 
 

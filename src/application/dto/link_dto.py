@@ -46,22 +46,14 @@ class LinkInfoResponse:
     full_short_url: str
     is_expired: bool
     project_id: Optional[UUID]
-    clicks: int = 0
-    last_used_at: Optional[datetime] = None
 
 
 @dataclass
 class LinkStatsResponse:
     short_code: str
-    original_url: str
-    created_at: datetime
+    full_short_url: str
     clicks: int
     last_used_at: Optional[datetime]
-    expires_at: Optional[datetime]
-    full_short_url: str
-    is_expired: bool
-    project_id: Optional[UUID]
-    owner_user_id: Optional[UUID]
 
 
 @dataclass
