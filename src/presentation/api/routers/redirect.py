@@ -30,9 +30,6 @@ async def redirect_to_original(
             if expires_at <= now:
                 cached = None
 
-        if cached:
-            return RedirectResponse(url=cached["original_url"], status_code=307)
-
     time_provider = SystemTimeProvider()
     use_case = ResolveLinkUseCase(uow, time_provider)
     result = await use_case.execute(short_code)

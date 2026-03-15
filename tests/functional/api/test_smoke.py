@@ -1,7 +1,7 @@
 import pytest
 import pytest_asyncio
 
-
+#ваще что запустилось чекнем
 @pytest.mark.asyncio
 async def test_health_endpoint(client):
     response = await client.get("/health")

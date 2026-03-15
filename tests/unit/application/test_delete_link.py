@@ -28,9 +28,6 @@ class TestDeleteLinkUseCase:
     def sample_short_code(self):
         return "abc123"
 
-    @pytest.fixture
-    def sample_user_id(self):
-        return uuid4()
 
     @pytest.fixture
     def sample_link(self, sample_user_id):
@@ -53,14 +50,14 @@ class TestDeleteLinkUseCase:
         sample_user_id,
         sample_link,
     ):
-        """Test successful deletion by owner."""
-        # Arrange
+        
+        
         mock_uow.links.get_by_short_code = AsyncMock(return_value=sample_link)
 
-        # Act
+        
         await use_case.execute(sample_short_code, actor_user_id=sample_user_id)
 
-        # Assert
+        
         mock_uow.links.get_by_short_code.assert_called_once_with(sample_short_code)
         sample_link.is_owner.assert_called_once_with(sample_user_id)
         sample_link.delete.assert_called_once()
@@ -75,16 +72,16 @@ class TestDeleteLinkUseCase:
         sample_user_id,
         sample_link,
     ):
-        """Test UserNotAuthorizedError when non-owner tries to delete."""
-        # Arrange
+        
+        
         sample_link.is_owner = Mock(return_value=False)
         mock_uow.links.get_by_short_code = AsyncMock(return_value=sample_link)
 
-        # Act & Assert
+        
         with pytest.raises(UserNotAuthorizedError):
             await use_case.execute(sample_short_code, actor_user_id=sample_user_id)
 
-        # Verify no delete or commit
+        
         sample_link.delete.assert_not_called()
         mock_uow.links.update.assert_not_called()
         mock_uow.commit.assert_not_called()
@@ -96,11 +93,11 @@ class TestDeleteLinkUseCase:
         sample_short_code,
         sample_user_id,
     ):
-        """Test LinkNotFoundError when link does not exist."""
-        # Arrange
+        
+        
         mock_uow.links.get_by_short_code = AsyncMock(return_value=None)
 
-        # Act & Assert
+        
         with pytest.raises(LinkNotFoundError):
             await use_case.execute(sample_short_code, actor_user_id=sample_user_id)
 
@@ -110,17 +107,17 @@ class TestDeleteLinkUseCase:
         mock_uow,
         sample_short_code,
     ):
-        """Test anonymous user can delete anonymous link (owner_user_id is None)."""
-        # Arrange
+        
+        
         link = Mock()
-        link.is_owner = Mock(return_value=True)  # is_owner(None) returns True
+        link.is_owner = Mock(return_value=True)  
         link.delete = Mock()
         mock_uow.links.get_by_short_code = AsyncMock(return_value=link)
 
-        # Act
+        
         await use_case.execute(sample_short_code, actor_user_id=None)
 
-        # Assert
+        
         link.is_owner.assert_called_once_with(None)
         link.delete.assert_called_once()
         mock_uow.links.update.assert_called_once_with(link)
@@ -133,13 +130,13 @@ class TestDeleteLinkUseCase:
         sample_short_code,
         sample_user_id,
     ):
-        """Test authenticated user cannot delete anonymous link."""
-        # Arrange
+        
+        
         link = Mock()
         link.is_owner = Mock(return_value=False)
         mock_uow.links.get_by_short_code = AsyncMock(return_value=link)
 
-        # Act & Assert
+        
         with pytest.raises(UserNotAuthorizedError):
             await use_case.execute(sample_short_code, actor_user_id=sample_user_id)
 
@@ -149,11 +146,11 @@ class TestDeleteLinkUseCase:
         sample_short_code,
         sample_user_id,
     ):
-        """Test validation error for invalid short code."""
-        # Arrange
-        invalid_code = "a"  # too short
+        
+        
+        invalid_code = "a"  
 
-        # Act & Assert
+        
         with pytest.raises(ValidationError):
             await use_case.execute(invalid_code, actor_user_id=sample_user_id)
 
@@ -162,10 +159,10 @@ class TestDeleteLinkUseCase:
         use_case,
         sample_user_id,
     ):
-        """Test validation error for short code with invalid characters."""
-        # Arrange
+        
+        
         invalid_code = "abc@123"
 
-        # Act & Assert
+        
         with pytest.raises(ValidationError):
             await use_case.execute(invalid_code, actor_user_id=sample_user_id)

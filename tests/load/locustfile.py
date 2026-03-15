@@ -147,7 +147,7 @@ def on_test_start(environment, **kwargs):
             print(f"Warning: Pool size ({len(SHORT_CODES_POOL)}) below minimum ({MIN_POOL_SIZE}), attempting to create additional links...")
             additional_needed = MIN_POOL_SIZE - len(SHORT_CODES_POOL)
             attempts = 0
-            max_attempts = additional_needed * 3  # Allow for some failures
+            max_attempts = additional_needed * 3  
             while len(SHORT_CODES_POOL) < MIN_POOL_SIZE and attempts < max_attempts:
                 payload = {
                     "original_url": generate_random_url(),

@@ -6,7 +6,15 @@ from uuid import uuid4
 
 
 class TestCacheBehaviour:
-
+    """
+        Тут на самом деле просто база для редиректов:
+        - при отсутствии записи в Redis ссылка берётся из БД и сохраняется в кэш;
+        - при наличии записи данные используются из кэша без повторной записи;
+        - кэш очищается при обновлении ссылки;
+        - кэш очищается при изменении кода;
+        - кэш очищается при удалении ссылки;
+        - кэш очищается при удалении истёкших ссылок.
+        """
     @pytest.mark.asyncio
     async def test_redirect_cache_miss_db_fetch_cache_set(
         self, client, redis_client, uow, test_settings
@@ -78,12 +86,12 @@ class TestCacheBehaviour:
         redis_client.client.setex.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_cache_invalidated_on_link_update(self, client, redis_client, uow):
+    async def test_cache_invalidated_on_link_update(self, client, redis_client, uow, auth_headers):
         payload = {
             "original_url": "https://example.com",
             "custom_alias": "updatecachetest"
         }
-        response = await client.post("/links/shorten", json=payload)
+        response = await client.post("/links/shorten", json=payload, headers=auth_headers)
         assert response.status_code == 201
         short_code = response.json()["short_code"]
 
@@ -94,20 +102,24 @@ class TestCacheBehaviour:
         update_payload = {
             "original_url": "https://updated-example.com"
         }
-        response = await client.put(f"/links/{short_code}", json=update_payload)
+        response = await client.put(
+            f"/links/{short_code}",
+            json=update_payload,
+            headers=auth_headers,
+        )
         assert response.status_code == 200
 
         redis_client.client.delete.assert_called_once_with(f"link:code:{short_code}")
 
     @pytest.mark.asyncio
     async def test_cache_invalidated_on_link_update_with_new_short_code(
-        self, client, redis_client, uow
+            self, client, redis_client, uow, auth_headers
     ):
         payload = {
             "original_url": "https://example.com",
             "custom_alias": "updatealias"
         }
-        response = await client.post("/links/shorten", json=payload)
+        response = await client.post("/links/shorten", json=payload, headers=auth_headers)
         assert response.status_code == 201
         short_code = response.json()["short_code"]
 
@@ -119,7 +131,11 @@ class TestCacheBehaviour:
         update_payload = {
             "new_short_code": new_alias
         }
-        response = await client.put(f"/links/{short_code}", json=update_payload)
+        response = await client.put(
+            f"/links/{short_code}",
+            json=update_payload,
+            headers=auth_headers,
+        )
         assert response.status_code == 200
 
         assert redis_client.client.delete.call_count == 2
@@ -129,12 +145,18 @@ class TestCacheBehaviour:
         assert f"link:code:{new_alias}" in delete_keys
 
     @pytest.mark.asyncio
-    async def test_cache_invalidated_on_link_delete(self, client, redis_client, uow):
+    async def test_cache_invalidated_on_link_delete(
+            self,
+            client,
+            redis_client,
+            uow,
+            auth_headers,
+    ):
         payload = {
             "original_url": "https://example.com",
             "custom_alias": "deletecachetest"
         }
-        response = await client.post("/links/shorten", json=payload)
+        response = await client.post("/links/shorten", json=payload, headers=auth_headers)
         assert response.status_code == 201
         short_code = response.json()["short_code"]
 
@@ -142,7 +164,7 @@ class TestCacheBehaviour:
 
         redis_client.client.delete.reset_mock()
 
-        response = await client.delete(f"/links/{short_code}")
+        response = await client.delete(f"/links/{short_code}", headers=auth_headers)
         assert response.status_code == 204
 
         redis_client.client.delete.assert_called_once_with(f"link:code:{short_code}")

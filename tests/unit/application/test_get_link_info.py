@@ -59,17 +59,15 @@ class TestGetLinkInfoUseCase:
         mock_uow,
         sample_short_code,
         sample_link,
-        sample_stats,
     ):
-        """Test successful link info retrieval."""
-        # Arrange
+        
+        
         mock_uow.links.get_by_short_code = AsyncMock(return_value=sample_link)
-        mock_uow.stats.get_by_link_id = AsyncMock(return_value=sample_stats)
 
-        # Act
+        
         result = await use_case.execute(sample_short_code)
 
-        # Assert
+        
         assert isinstance(result, LinkInfoResponse)
         assert result.short_code == "abc123"
         assert result.original_url == "https://example.com"
@@ -81,12 +79,10 @@ class TestGetLinkInfoUseCase:
         assert result.full_short_url == "http://localhost:8000/opupupa/abc123"
         assert result.is_expired is False
         assert result.project_id is None
-        assert result.clicks == 42
-        assert result.last_used_at == sample_stats.last_used_at
 
-        # Verify interactions
+        
         mock_uow.links.get_by_short_code.assert_called_once_with(sample_short_code)
-        mock_uow.stats.get_by_link_id.assert_called_once_with(sample_link.id)
+        mock_uow.stats.get_by_link_id.assert_not_called()
 
     async def test_link_not_found(
         self,
@@ -94,15 +90,15 @@ class TestGetLinkInfoUseCase:
         mock_uow,
         sample_short_code,
     ):
-        """Test LinkNotFoundError when link does not exist."""
-        # Arrange
+        
+        
         mock_uow.links.get_by_short_code = AsyncMock(return_value=None)
 
-        # Act & Assert
+        
         with pytest.raises(LinkNotFoundError):
             await use_case.execute(sample_short_code)
 
-        # Verify stats not called
+        
         mock_uow.stats.get_by_link_id.assert_not_called()
 
     async def test_stats_not_found(
@@ -112,17 +108,20 @@ class TestGetLinkInfoUseCase:
         sample_short_code,
         sample_link,
     ):
-        """Test link info when stats are not found (zero clicks)."""
-        # Arrange
+        
+        
         mock_uow.links.get_by_short_code = AsyncMock(return_value=sample_link)
-        mock_uow.stats.get_by_link_id = AsyncMock(return_value=None)
 
-        # Act
+        
         result = await use_case.execute(sample_short_code)
 
-        # Assert
-        assert result.clicks == 0
-        assert result.last_used_at is None
+        
+        assert isinstance(result, LinkInfoResponse)
+        
+
+        
+        mock_uow.links.get_by_short_code.assert_called_once_with(sample_short_code)
+        mock_uow.stats.get_by_link_id.assert_not_called()
 
     async def test_link_with_expiration(
         self,
@@ -130,21 +129,20 @@ class TestGetLinkInfoUseCase:
         mock_uow,
         sample_short_code,
         sample_link,
-        sample_stats,
     ):
-        """Test link info with expiration date."""
-        # Arrange
+        
+        
         expires_at = datetime.now(timezone.utc) + timedelta(days=1)
         sample_link.expires_at = Mock(spec=ExpiresAt)
         sample_link.expires_at.value = expires_at
         mock_uow.links.get_by_short_code = AsyncMock(return_value=sample_link)
-        mock_uow.stats.get_by_link_id = AsyncMock(return_value=sample_stats)
 
-        # Act
+        
         result = await use_case.execute(sample_short_code)
 
-        # Assert
+        
         assert result.expires_at == expires_at
+        mock_uow.stats.get_by_link_id.assert_not_called()
 
     async def test_link_expired(
         self,
@@ -152,19 +150,18 @@ class TestGetLinkInfoUseCase:
         mock_uow,
         sample_short_code,
         sample_link,
-        sample_stats,
     ):
-        """Test link info when link is expired."""
-        # Arrange
+        
+        
         sample_link.is_expired = Mock(return_value=True)
         mock_uow.links.get_by_short_code = AsyncMock(return_value=sample_link)
-        mock_uow.stats.get_by_link_id = AsyncMock(return_value=sample_stats)
 
-        # Act
+        
         result = await use_case.execute(sample_short_code)
 
-        # Assert
+        
         assert result.is_expired is True
+        mock_uow.stats.get_by_link_id.assert_not_called()
 
     async def test_link_deleted(
         self,
@@ -172,30 +169,29 @@ class TestGetLinkInfoUseCase:
         mock_uow,
         sample_short_code,
         sample_link,
-        sample_stats,
     ):
-        """Test link info when link is deleted."""
-        # Arrange
+        
+        
         sample_link.is_deleted = True
         mock_uow.links.get_by_short_code = AsyncMock(return_value=sample_link)
-        mock_uow.stats.get_by_link_id = AsyncMock(return_value=sample_stats)
 
-        # Act
+        
         result = await use_case.execute(sample_short_code)
 
-        # Assert
+        
         assert result.is_deleted is True
+        mock_uow.stats.get_by_link_id.assert_not_called()
 
     async def test_invalid_short_code_validation(
         self,
         use_case,
         sample_short_code,
     ):
-        """Test validation error for invalid short code."""
-        # Arrange
-        invalid_code = "a"  # too short
+        
+        
+        invalid_code = "a"  
 
-        # Act & Assert
+        
         with pytest.raises(ValidationError):
             await use_case.execute(invalid_code)
 
@@ -203,11 +199,11 @@ class TestGetLinkInfoUseCase:
         self,
         use_case,
     ):
-        """Test validation error for short code with invalid characters."""
-        # Arrange
+        
+        
         invalid_code = "abc@123"
 
-        # Act & Assert
+        
         with pytest.raises(ValidationError):
             await use_case.execute(invalid_code)
 

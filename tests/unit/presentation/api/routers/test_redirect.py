@@ -7,7 +7,7 @@ from src.presentation.api.routers.redirect import redirect_to_original
 
 
 class TestRedirectRouter:
-    """Unit tests for redirect router."""
+    
 
     @pytest.fixture
     def mock_cache(self):
@@ -38,21 +38,21 @@ class TestRedirectRouter:
         return provider
 
     async def test_redirect_cache_hit_no_expiration(self, mock_cache, mock_uow, mock_settings, mock_resolve_link_result, mock_time_provider):
-        """Test redirect when cache hit and no expiration."""
+        
         short_code = "abc123"
         mock_cache.get.return_value = {
             "original_url": "https://cached.example.com",
             "expires_at": None,
             "link_id": "cached-id"
         }
-        # Mock SystemTimeProvider and ResolveLinkUseCase
+        
         with patch('src.presentation.api.routers.redirect.SystemTimeProvider') as mock_system_time:
             mock_system_time.return_value = mock_time_provider
             with patch('src.presentation.api.routers.redirect.ResolveLinkUseCase') as mock_use_case_class:
                 mock_use_case = AsyncMock()
                 mock_use_case.execute = AsyncMock(return_value=mock_resolve_link_result)
                 mock_use_case_class.return_value = mock_use_case
-                # Call the endpoint
+                
                 response = await redirect_to_original(
                     short_code=short_code,
                     cache=mock_cache,
@@ -60,19 +60,19 @@ class TestRedirectRouter:
                     settings=mock_settings
                 )
 
-        # Verify cache.get called with short_code
+        
         mock_cache.get.assert_called_once_with(short_code)
-        # Verify use case called with short_code
+        
         mock_use_case.execute.assert_called_once_with(short_code)
-        # Verify cache.set not called because cache hit and not expired
+        
         mock_cache.set.assert_not_called()
-        # Verify redirect response
+        
         assert isinstance(response, RedirectResponse)
         assert response.headers['Location'] == mock_resolve_link_result.original_url
         assert response.status_code == 307
 
     async def test_redirect_cache_miss(self, mock_cache, mock_uow, mock_settings, mock_resolve_link_result, mock_time_provider):
-        """Test redirect when cache miss."""
+        
         short_code = "abc123"
         mock_cache.get.return_value = None
         with patch('src.presentation.api.routers.redirect.SystemTimeProvider') as mock_system_time:
@@ -90,7 +90,7 @@ class TestRedirectRouter:
 
         mock_cache.get.assert_called_once_with(short_code)
         mock_use_case.execute.assert_called_once_with(short_code)
-        # Cache set should be called because cached is None
+        
         mock_cache.set.assert_called_once_with(
             short_code=short_code,
             original_url=mock_resolve_link_result.original_url,
@@ -102,7 +102,7 @@ class TestRedirectRouter:
         assert response.headers['Location'] == mock_resolve_link_result.original_url
 
     async def test_redirect_cache_expired(self, mock_cache, mock_uow, mock_settings, mock_resolve_link_result, mock_time_provider):
-        """Test redirect when cache entry expired."""
+        
         short_code = "abc123"
         expired_time = datetime.now(timezone.utc).replace(tzinfo=timezone.utc) - timedelta(seconds=3600)
         mock_cache.get.return_value = {
@@ -125,7 +125,7 @@ class TestRedirectRouter:
 
         mock_cache.get.assert_called_once_with(short_code)
         mock_use_case.execute.assert_called_once_with(short_code)
-        # Cache set should be called because cached treated as miss (expired)
+        
         mock_cache.set.assert_called_once_with(
             short_code=short_code,
             original_url=mock_resolve_link_result.original_url,
@@ -136,7 +136,7 @@ class TestRedirectRouter:
         assert isinstance(response, RedirectResponse)
 
     async def test_redirect_cache_hit_with_expiration_future(self, mock_cache, mock_uow, mock_settings, mock_resolve_link_result, mock_time_provider):
-        """Test redirect when cache hit with future expiration."""
+        
         short_code = "abc123"
         future_time = datetime.now(timezone.utc).replace(tzinfo=timezone.utc) + timedelta(seconds=3600)
         mock_cache.get.return_value = {
@@ -159,15 +159,15 @@ class TestRedirectRouter:
 
         mock_cache.get.assert_called_once_with(short_code)
         mock_use_case.execute.assert_called_once_with(short_code)
-        # Cache set should NOT be called because cache hit and not expired
+        
         mock_cache.set.assert_not_called()
         assert isinstance(response, RedirectResponse)
 
     async def test_redirect_cache_hit_expires_at_no_tzinfo(self, mock_cache, mock_uow, mock_settings, mock_resolve_link_result, mock_time_provider):
-        """Test cache hit with expires_at string without timezone."""
+        
         short_code = "abc123"
         future_time = datetime.now(timezone.utc) + timedelta(seconds=3600)
-        # Remove tzinfo
+        
         future_naive = future_time.replace(tzinfo=None)
         mock_cache.get.return_value = {
             "original_url": "https://cached.example.com",
@@ -187,6 +187,5 @@ class TestRedirectRouter:
                     settings=mock_settings
                 )
 
-        # Should treat naive datetime as UTC and not expire
         mock_cache.set.assert_not_called()
         assert isinstance(response, RedirectResponse)

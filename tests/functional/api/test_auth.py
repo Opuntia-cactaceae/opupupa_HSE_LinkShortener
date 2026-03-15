@@ -67,7 +67,7 @@ class TestAuth:
 
     @pytest.mark.asyncio
     async def test_login_success(self, client: AsyncClient):
-        """POST /auth/login with valid credentials should return token."""
+        
 
         register_payload = {
             "email": "login@example.com",

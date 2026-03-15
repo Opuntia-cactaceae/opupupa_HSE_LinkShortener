@@ -17,20 +17,12 @@ from ...domain.repositories.unit_of_work import IUnitOfWork
 
 
 class UpdateLinkUseCase:
-    """Обновляет параметры существующей короткой ссылки.
-
-    Изменяет исходный URL, короткий код, срок действия и привязку к проекту.
-    """
     def __init__(self, uow: IUnitOfWork) -> None:
         self._uow = uow
 
     async def execute(
         self, short_code: str, request: UpdateLinkRequest, actor_user_id: Optional[UUID]
     ) -> None:
-        """Обновляет параметры короткой ссылки.
-
-        Проверяет права доступа и применяет изменения к сущности ссылки.
-        """
         try:
             code = ShortCode.from_string(short_code)
         except ValueError as e:
@@ -39,6 +31,9 @@ class UpdateLinkUseCase:
         link = await self._uow.links.get_by_short_code(str(code))
         if link is None:
             raise LinkNotFoundError()
+
+        if actor_user_id is None:
+            raise UserNotAuthorizedError()
 
         if not link.is_owner(actor_user_id):
             raise UserNotAuthorizedError()
@@ -67,8 +62,6 @@ class UpdateLinkUseCase:
             link.update_expires_at(None)
 
         if request.project_id is not None:
-            if actor_user_id is None:
-                raise ValidationError("Anonymous users cannot assign projects")
             project = await self._uow.projects.get_by_id(request.project_id)
             if project is None:
                 raise ValidationError("Project not found")

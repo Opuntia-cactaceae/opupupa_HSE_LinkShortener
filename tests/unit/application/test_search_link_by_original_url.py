@@ -50,15 +50,15 @@ class TestSearchLinkByOriginalUrlUseCase:
         sample_original_url,
         sample_link,
     ):
-        """Test successful search by original URL."""
-        # Arrange
+        
+        
         mock_uow.links.find_by_original_url = AsyncMock(return_value=[sample_link])
         query = SearchLinksQuery(original_url=sample_original_url)
 
-        # Act
+        
         results = await use_case.execute(query)
 
-        # Assert
+        
         assert len(results) == 1
         result = results[0]
         assert isinstance(result, LinkInfoResponse)
@@ -70,7 +70,7 @@ class TestSearchLinkByOriginalUrlUseCase:
         assert result.owner_user_id == sample_link.owner_user_id
         assert result.is_deleted is False
 
-        # Verify call
+        
         mock_uow.links.find_by_original_url.assert_called_once_with(
             sample_original_url, 100, 0
         )
@@ -81,15 +81,15 @@ class TestSearchLinkByOriginalUrlUseCase:
         mock_uow,
         sample_original_url,
     ):
-        """Test search returns empty list when no links found."""
-        # Arrange
+        
+        
         mock_uow.links.find_by_original_url = AsyncMock(return_value=[])
         query = SearchLinksQuery(original_url=sample_original_url)
 
-        # Act
+        
         results = await use_case.execute(query)
 
-        # Assert
+        
         assert results == []
         mock_uow.links.find_by_original_url.assert_called_once_with(
             sample_original_url, 100, 0
@@ -101,15 +101,15 @@ class TestSearchLinkByOriginalUrlUseCase:
         mock_uow,
         sample_original_url,
     ):
-        """Test pagination parameters are passed correctly."""
-        # Arrange
+        
+        
         mock_uow.links.find_by_original_url = AsyncMock(return_value=[])
         query = SearchLinksQuery(original_url=sample_original_url, limit=10, offset=20)
 
-        # Act
+        
         await use_case.execute(query)
 
-        # Assert
+        
         mock_uow.links.find_by_original_url.assert_called_once_with(
             sample_original_url, 10, 20
         )
@@ -121,8 +121,8 @@ class TestSearchLinkByOriginalUrlUseCase:
         sample_original_url,
         sample_link,
     ):
-        """Test search returning multiple links."""
-        # Arrange
+        
+        
         link2 = Mock()
         link2.short_code = Mock(spec=ShortCode)
         link2.short_code.__str__ = Mock(return_value="def456")
@@ -137,10 +137,10 @@ class TestSearchLinkByOriginalUrlUseCase:
         mock_uow.links.find_by_original_url = AsyncMock(return_value=[sample_link, link2])
         query = SearchLinksQuery(original_url=sample_original_url)
 
-        # Act
+        
         results = await use_case.execute(query)
 
-        # Assert
+        
         assert len(results) == 2
         assert results[0].short_code == "abc123"
         assert results[1].short_code == "def456"
@@ -151,8 +151,8 @@ class TestSearchLinkByOriginalUrlUseCase:
         mock_uow,
         sample_original_url,
     ):
-        """Test search includes expiration date."""
-        # Arrange
+        
+        
         link = Mock()
         link.short_code = Mock(spec=ShortCode)
         link.short_code.__str__ = Mock(return_value="abc123")
@@ -169,10 +169,10 @@ class TestSearchLinkByOriginalUrlUseCase:
         mock_uow.links.find_by_original_url = AsyncMock(return_value=[link])
         query = SearchLinksQuery(original_url=sample_original_url)
 
-        # Act
+        
         results = await use_case.execute(query)
 
-        # Assert
+        
         assert results[0].expires_at == expires_at
 
     async def test_link_deleted(
@@ -181,8 +181,8 @@ class TestSearchLinkByOriginalUrlUseCase:
         mock_uow,
         sample_original_url,
     ):
-        """Test search includes deleted flag."""
-        # Arrange
+        
+        
         link = Mock()
         link.short_code = Mock(spec=ShortCode)
         link.short_code.__str__ = Mock(return_value="abc123")
@@ -197,8 +197,8 @@ class TestSearchLinkByOriginalUrlUseCase:
         mock_uow.links.find_by_original_url = AsyncMock(return_value=[link])
         query = SearchLinksQuery(original_url=sample_original_url)
 
-        # Act
+        
         results = await use_case.execute(query)
 
-        # Assert
+        
         assert results[0].is_deleted is True

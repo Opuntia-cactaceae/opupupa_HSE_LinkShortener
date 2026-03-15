@@ -32,13 +32,7 @@ class TestLoginUserUseCase:
     def use_case(self, mock_uow, mock_password_hasher, mock_token_provider):
         return LoginUserUseCase(uow=mock_uow, password_hasher=mock_password_hasher, token_provider=mock_token_provider)
 
-    @pytest.fixture
-    def sample_email(self):
-        return "test@example.com"
 
-    @pytest.fixture
-    def sample_password(self):
-        return "password123"
 
     @pytest.fixture
     def sample_user(self):
@@ -57,20 +51,20 @@ class TestLoginUserUseCase:
         sample_password,
         sample_user,
     ):
-        """Test successful login."""
-        # Arrange
+        
+        
         mock_uow.users.get_by_email = AsyncMock(return_value=sample_user)
         request = LoginUserRequest(email=sample_email, password=sample_password)
 
-        # Act
+        
         result = await use_case.execute(request)
 
-        # Assert
+        
         assert isinstance(result, AuthResponse)
         assert result.access_token == "fake.jwt.token"
         assert result.token_type == "bearer"
 
-        # Verify interactions
+        
         mock_uow.users.get_by_email.assert_called_once_with(sample_email)
         mock_password_hasher.verify.assert_called_once_with(sample_password, sample_user.password_hash)
         mock_token_provider.encode.assert_called_once_with(sample_user.id)
@@ -84,16 +78,16 @@ class TestLoginUserUseCase:
         sample_email,
         sample_password,
     ):
-        """Test UserNotFoundError when user does not exist."""
-        # Arrange
+        
+        
         mock_uow.users.get_by_email = AsyncMock(return_value=None)
         request = LoginUserRequest(email=sample_email, password=sample_password)
 
-        # Act & Assert
+        
         with pytest.raises(UserNotFoundError):
             await use_case.execute(request)
 
-        # Verify no password verification or token generation
+        
         mock_password_hasher.verify.assert_not_called()
         mock_token_provider.encode.assert_not_called()
 
@@ -107,17 +101,17 @@ class TestLoginUserUseCase:
         sample_password,
         sample_user,
     ):
-        """Test InvalidCredentialsError when password is incorrect."""
-        # Arrange
+        
+        
         mock_password_hasher.verify.return_value = False
         mock_uow.users.get_by_email = AsyncMock(return_value=sample_user)
         request = LoginUserRequest(email=sample_email, password=sample_password)
 
-        # Act & Assert
+        
         with pytest.raises(InvalidCredentialsError):
             await use_case.execute(request)
 
-        # Verify password verification called but no token generation
+        
         mock_password_hasher.verify.assert_called_once_with(sample_password, sample_user.password_hash)
         mock_token_provider.encode.assert_not_called()
 
@@ -131,16 +125,16 @@ class TestLoginUserUseCase:
         sample_password,
         sample_user,
     ):
-        """Test that token provider receives correct user ID."""
-        # Arrange
+        
+        
         mock_uow.users.get_by_email = AsyncMock(return_value=sample_user)
         request = LoginUserRequest(email=sample_email, password=sample_password)
 
-        # Act
+        
         await use_case.execute(request)
 
-        # Verify password verification
+        
         mock_password_hasher.verify.assert_called_once_with(sample_password, sample_user.password_hash)
 
-        # Assert
+        
         mock_token_provider.encode.assert_called_once_with(sample_user.id)

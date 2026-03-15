@@ -15,6 +15,16 @@ def make_test_hash(password: str) -> str:
 
 
 class TestExpirationBehaviour:
+    """
+    Тесты поведения протухших ссылок:
+    - протухшая ссылка не выполняет редирект;
+    - протухшая ссылка возвращается в списке протухших;
+    - кейс помечает протухшие ссылки как протухшие;
+    - кейс не затрагивает активные ссылки;
+    - давно не использовавшиеся ссылки считаются протухшими;
+    - недавно использовавшиеся ссылки не считаются протухшими;
+    - после очистки протухшая ссылка больше не выполняет редирект.
+    """
     @pytest.mark.asyncio
     async def test_expired_link_cannot_redirect(self, client, uow):
         async with uow:
@@ -160,7 +170,7 @@ class TestExpirationBehaviour:
         short_code = ShortCode("active123")
         original_url = OriginalUrl("https://active.example.com")
         expires_at = ExpiresAt.from_datetime(
-            datetime.now(timezone.utc) + timedelta(days=1)  # future
+            datetime.now(timezone.utc) + timedelta(days=1)  
         )
 
         link = Link(
@@ -312,3 +322,41 @@ class TestExpirationBehaviour:
         async with uow:
             link = await uow.links.get_by_short_code(str(short_code))
             assert link.expired_at is None
+
+    @pytest.mark.asyncio
+    async def test_purged_expired_link_cannot_redirect(self, client, uow):
+        async with uow:
+            password_hash = make_test_hash("testpassword123")
+            user = User.create(
+                email=f"purgeredirect_{uuid4().hex[:8]}@example.com",
+                password_hash=password_hash,
+            )
+            await uow.users.add(user)
+            await uow.commit()
+
+        short_code = ShortCode("purgeredir")
+        original_url = OriginalUrl("https://purgeredir.example.com")
+
+        async with uow:
+            link = Link(
+                short_code=short_code,
+                original_url=original_url,
+                owner_user_id=user.id,
+                expires_at=ExpiresAt.from_datetime(datetime.now(timezone.utc) - timedelta(days=1)),
+                id=uuid4(),
+            )
+            await uow.links.add(link)
+            await uow.commit()
+
+        async with uow:
+            from src.application.use_cases.purge_expired_links import PurgeExpiredLinksUseCase
+            from src.application.services.time_provider import SystemTimeProvider
+
+            use_case = PurgeExpiredLinksUseCase(uow, SystemTimeProvider())
+            purged_links = await use_case.execute()
+
+        assert len(purged_links) == 1
+        assert purged_links[0].short_code == short_code
+
+        response = await client.get(f"/opupupa/{short_code}", follow_redirects=False)
+        assert response.status_code == 404

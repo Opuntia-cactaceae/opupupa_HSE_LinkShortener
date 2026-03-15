@@ -5,26 +5,7 @@ from datetime import datetime, timezone, timedelta
 
 
 class TestLinks:
-
-    @pytest.fixture
-    async def auth_headers(self, client: AsyncClient):
-        import uuid
-        unique_email = f"links_user_{uuid.uuid4().hex[:8]}@example.com"
-        register_payload = {
-            "email": unique_email,
-            "password": "password"
-        }
-        response = await client.post("/auth/register", json=register_payload)
-        assert response.status_code == 201
-        login_payload = {
-            "email": unique_email,
-            "password": "password"
-        }
-        response = await client.post("/auth/login", json=login_payload)
-        assert response.status_code == 200
-        token = response.json()["access_token"]
-        return {"Authorization": f"Bearer {token}"}
-
+#ну тут в лоб тест функционала
     @pytest.mark.asyncio
     async def test_create_anonymous_link(self, client: AsyncClient):
         payload = {
@@ -71,9 +52,9 @@ class TestLinks:
             "custom_alias": "duplicate"
         }
         response = await client.post("/links/shorten", json=payload)
-        assert response.status_code == 201  # First succeeds
+        assert response.status_code == 201  
         response = await client.post("/links/shorten", json=payload)
-        assert response.status_code == 409  # Conflict
+        assert response.status_code == 409  
 
     @pytest.mark.asyncio
     async def test_create_invalid_url(self, client: AsyncClient):
@@ -101,8 +82,6 @@ class TestLinks:
         assert "updated_at" in data
         assert "full_short_url" in data
         assert "is_expired" in data
-        assert "clicks" in data
-        assert data["clicks"] == 0
 
     @pytest.mark.asyncio
     async def test_get_link_info_not_found(self, client: AsyncClient):
@@ -165,7 +144,7 @@ class TestLinks:
             "original_url": "https://updated.example.com"
         }
         response = await client.put(f"/links/{short_code}", json=update_payload)
-        assert response.status_code == 200
+        assert response.status_code == 403
 
     @pytest.mark.asyncio
     async def test_delete_by_owner(self, client: AsyncClient, auth_headers):
@@ -207,7 +186,7 @@ class TestLinks:
         short_code = response.json()["short_code"]
 
         response = await client.delete(f"/links/{short_code}")
-        assert response.status_code == 204
+        assert response.status_code == 403
 
     @pytest.mark.asyncio
     async def test_get_link_stats_success(self, client: AsyncClient):
@@ -364,12 +343,12 @@ class TestLinks:
         assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_update_bad_expires_at_rejected(self, client: AsyncClient):
+    async def test_update_bad_expires_at_rejected(self, client: AsyncClient, auth_headers):
         payload = {
             "original_url": "https://example.com",
             "custom_alias": "updateexpires"
         }
-        response = await client.post("/links/shorten", json=payload)
+        response = await client.post("/links/shorten", json=payload, headers=auth_headers)
         assert response.status_code == 201
         short_code = response.json()["short_code"]
 
@@ -378,7 +357,11 @@ class TestLinks:
         update_payload = {
             "expires_at": past.isoformat()
         }
-        response = await client.put(f"/links/{short_code}", json=update_payload)
+        response = await client.put(
+            f"/links/{short_code}",
+            json=update_payload,
+            headers=auth_headers,
+        )
         assert response.status_code == 422
 
         future = datetime.now(timezone.utc) + timedelta(minutes=5)
@@ -386,7 +369,11 @@ class TestLinks:
         update_payload = {
             "expires_at": future.isoformat()
         }
-        response = await client.put(f"/links/{short_code}", json=update_payload)
+        response = await client.put(
+            f"/links/{short_code}",
+            json=update_payload,
+            headers=auth_headers,
+        )
         assert response.status_code == 200
 
     @pytest.mark.asyncio

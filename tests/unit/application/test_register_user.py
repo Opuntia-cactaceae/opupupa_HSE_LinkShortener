@@ -28,13 +28,7 @@ class TestRegisterUserUseCase:
     def use_case(self, mock_uow, mock_password_hasher):
         return RegisterUserUseCase(uow=mock_uow, password_hasher=mock_password_hasher)
 
-    @pytest.fixture
-    def sample_email(self):
-        return "test@example.com"
 
-    @pytest.fixture
-    def sample_password(self):
-        return "password123"
 
     @pytest.fixture
     def sample_user(self):
@@ -51,8 +45,8 @@ class TestRegisterUserUseCase:
         sample_password,
         sample_user,
     ):
-        """Test successful user registration."""
-        # Arrange
+        
+        
         mock_uow.users.get_by_email = AsyncMock(return_value=None)
         mock_uow.users.add = AsyncMock()
         request = RegisterUserRequest(email=sample_email, password=sample_password)
@@ -60,14 +54,14 @@ class TestRegisterUserUseCase:
         with patch('src.application.use_cases.register_user.User') as MockUser:
             MockUser.create = Mock(return_value=sample_user)
             MockUser.validate_password = Mock()
-            # Act
+            
             result = await use_case.execute(request)
 
-        # Assert
+        
         assert isinstance(result, RegisterUserResponse)
         assert result.user_id == sample_user.id
 
-        # Verify interactions
+        
         mock_uow.users.get_by_email.assert_called_once_with(sample_email)
         MockUser.validate_password.assert_called_once_with(sample_password)
         mock_password_hasher.hash.assert_called_once_with(sample_password)
@@ -84,16 +78,16 @@ class TestRegisterUserUseCase:
         sample_password,
         sample_user,
     ):
-        """Test EmailAlreadyExistsError when email is already registered."""
-        # Arrange
+        
+        
         mock_uow.users.get_by_email = AsyncMock(return_value=sample_user)
         request = RegisterUserRequest(email=sample_email, password=sample_password)
 
-        # Act & Assert
+        
         with pytest.raises(EmailAlreadyExistsError):
             await use_case.execute(request)
 
-        # Verify no user creation or commit
+        
         mock_uow.users.add.assert_not_called()
         mock_uow.commit.assert_not_called()
 
@@ -104,20 +98,20 @@ class TestRegisterUserUseCase:
         mock_password_hasher,
         sample_password,
     ):
-        """Test validation error for invalid email."""
-        # Arrange
+        
+        
         mock_uow.users.get_by_email = AsyncMock(return_value=None)
         request = RegisterUserRequest(email="invalid-email", password=sample_password)
 
-        # Simulate User.create raising ValueError for invalid email
+        
         with patch('src.application.use_cases.register_user.User') as MockUser:
             MockUser.create = Mock(side_effect=ValueError("Invalid email format"))
             MockUser.validate_password = Mock()
-            # Act & Assert
+            
             with pytest.raises(ValidationError, match="Invalid email format"):
                 await use_case.execute(request)
 
-        # Verify no add or commit
+        
         mock_uow.users.add.assert_not_called()
         mock_uow.commit.assert_not_called()
         MockUser.validate_password.assert_called_once_with(sample_password)
@@ -130,18 +124,18 @@ class TestRegisterUserUseCase:
         mock_password_hasher,
         sample_email,
     ):
-        """Test validation error for password too short."""
-        # Arrange
+        
+        
         mock_uow.users.get_by_email = AsyncMock(return_value=None)
         request = RegisterUserRequest(email=sample_email, password="short")
 
         with patch('src.application.use_cases.register_user.User') as MockUser:
             MockUser.validate_password = Mock(side_effect=ValueError("Password must be at least 8 characters"))
-            # Act & Assert
+            
             with pytest.raises(ValidationError, match="Password must be at least 8 characters"):
                 await use_case.execute(request)
 
-        # Verify no add or commit
+        
         mock_uow.users.add.assert_not_called()
         mock_uow.commit.assert_not_called()
         MockUser.validate_password.assert_called_once_with("short")
@@ -156,15 +150,15 @@ class TestRegisterUserUseCase:
         sample_email,
         sample_password,
     ):
-        """Test that if User.create raises ValueError, ValidationError is propagated."""
-        # Arrange
+        
+        
         mock_uow.users.get_by_email = AsyncMock(return_value=None)
         request = RegisterUserRequest(email=sample_email, password=sample_password)
 
         with patch('src.application.use_cases.register_user.User') as MockUser:
             MockUser.validate_password = Mock()
             MockUser.create = Mock(side_effect=ValueError("Some validation error"))
-            # Act & Assert
+            
             with pytest.raises(ValidationError):
                 await use_case.execute(request)
 

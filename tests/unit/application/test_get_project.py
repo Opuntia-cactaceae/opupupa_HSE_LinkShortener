@@ -1,6 +1,5 @@
 import datetime
 import pytest
-from uuid import uuid4
 from unittest.mock import AsyncMock, Mock
 
 from src.application.use_cases.get_project import GetProjectUseCase
@@ -20,13 +19,7 @@ class TestGetProjectUseCase:
     def use_case(self, mock_uow):
         return GetProjectUseCase(uow=mock_uow)
 
-    @pytest.fixture
-    def sample_project_id(self):
-        return uuid4()
 
-    @pytest.fixture
-    def sample_user_id(self):
-        return uuid4()
 
     @pytest.fixture
     def mock_project(self, sample_project_id, sample_user_id):
@@ -40,14 +33,14 @@ class TestGetProjectUseCase:
         return project
 
     async def test_get_project_success(self, use_case, mock_uow, sample_project_id, sample_user_id, mock_project):
-        """Test successful project retrieval."""
-        # Arrange
+        
+        
         mock_uow.projects.get_by_id = AsyncMock(return_value=mock_project)
 
-        # Act
+        
         result = await use_case.execute(project_id=sample_project_id, actor_user_id=sample_user_id)
 
-        # Assert
+        
         assert isinstance(result, ProjectResponse)
         assert result.id == sample_project_id
         assert result.name == "Test Project"
@@ -59,24 +52,24 @@ class TestGetProjectUseCase:
         mock_project.is_owner.assert_called_once_with(sample_user_id)
 
     async def test_get_project_not_found(self, use_case, mock_uow, sample_project_id, sample_user_id):
-        """Test retrieval fails when project does not exist."""
-        # Arrange
+        
+        
         mock_uow.projects.get_by_id = AsyncMock(return_value=None)
 
-        # Act & Assert
+        
         with pytest.raises(ProjectNotFoundError):
             await use_case.execute(project_id=sample_project_id, actor_user_id=sample_user_id)
 
         mock_uow.projects.get_by_id.assert_called_once_with(sample_project_id)
 
     async def test_get_project_not_owner(self, use_case, mock_uow, sample_project_id, sample_user_id):
-        """Test retrieval fails when user is not the owner."""
-        # Arrange
+        
+        
         mock_project = Mock(spec=Project)
         mock_project.is_owner = Mock(return_value=False)
         mock_uow.projects.get_by_id = AsyncMock(return_value=mock_project)
 
-        # Act & Assert
+        
         with pytest.raises(UserNotAuthorizedError):
             await use_case.execute(project_id=sample_project_id, actor_user_id=sample_user_id)
 
@@ -84,12 +77,12 @@ class TestGetProjectUseCase:
         mock_project.is_owner.assert_called_once_with(sample_user_id)
 
     async def test_get_project_constructor(self):
-        """Test constructor sets uow."""
-        # Arrange
+        
+        
         mock_uow = AsyncMock()
 
-        # Act
+        
         use_case = GetProjectUseCase(uow=mock_uow)
 
-        # Assert
+        
         assert use_case._uow is mock_uow

@@ -1,5 +1,4 @@
 import pytest
-from uuid import uuid4
 from unittest.mock import AsyncMock, Mock
 
 from src.application.use_cases.delete_project import DeleteProjectUseCase
@@ -19,13 +18,7 @@ class TestDeleteProjectUseCase:
     def use_case(self, mock_uow):
         return DeleteProjectUseCase(uow=mock_uow)
 
-    @pytest.fixture
-    def sample_project_id(self):
-        return uuid4()
 
-    @pytest.fixture
-    def sample_user_id(self):
-        return uuid4()
 
     @pytest.fixture
     def mock_project(self, sample_user_id):
@@ -34,56 +27,56 @@ class TestDeleteProjectUseCase:
         return project
 
     async def test_delete_project_success(self, use_case, mock_uow, sample_project_id, sample_user_id, mock_project):
-        """Test successful project deletion."""
-        # Arrange
+        
+        
         mock_uow.projects.get_by_id = AsyncMock(return_value=mock_project)
         mock_uow.projects.delete = AsyncMock()
         mock_uow.commit.return_value = None
 
-        # Act
+        
         await use_case.execute(project_id=sample_project_id, actor_user_id=sample_user_id)
 
-        # Assert
+        
         mock_uow.projects.get_by_id.assert_called_once_with(sample_project_id)
         mock_project.is_owner.assert_called_once_with(sample_user_id)
         mock_uow.projects.delete.assert_called_once_with(mock_project)
         mock_uow.commit.assert_called_once()
 
     async def test_delete_project_not_found(self, use_case, mock_uow, sample_project_id, sample_user_id):
-        """Test deletion fails when project does not exist."""
-        # Arrange
+        
+        
         mock_uow.projects.get_by_id = AsyncMock(return_value=None)
 
-        # Act & Assert
+        
         with pytest.raises(ProjectNotFoundError):
             await use_case.execute(project_id=sample_project_id, actor_user_id=sample_user_id)
 
-        # Verify no delete or commit
+        
         mock_uow.projects.delete.assert_not_called()
         mock_uow.commit.assert_not_called()
 
     async def test_delete_project_not_owner(self, use_case, mock_uow, sample_project_id, sample_user_id):
-        """Test deletion fails when user is not the owner."""
-        # Arrange
+        
+        
         mock_project = Mock(spec=Project)
         mock_project.is_owner = Mock(return_value=False)
         mock_uow.projects.get_by_id = AsyncMock(return_value=mock_project)
 
-        # Act & Assert
+        
         with pytest.raises(UserNotAuthorizedError):
             await use_case.execute(project_id=sample_project_id, actor_user_id=sample_user_id)
 
-        # Verify no delete or commit
+        
         mock_uow.projects.delete.assert_not_called()
         mock_uow.commit.assert_not_called()
 
     async def test_delete_project_constructor(self):
-        """Test constructor sets uow."""
-        # Arrange
+        
+        
         mock_uow = AsyncMock()
 
-        # Act
+        
         use_case = DeleteProjectUseCase(uow=mock_uow)
 
-        # Assert
+        
         assert use_case._uow is mock_uow
